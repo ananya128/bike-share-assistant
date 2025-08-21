@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚴 Bike Share Analytics Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        body {
+            margin: 0px;
+            text-align: center;
+            background: black;
+            overflow: hidden;
+            background-color: #060a11;
+            background: -moz-linear-gradient(155deg,#060a11 0%,#293c64 40%);
+            background-image: linear-gradient(155deg,#060a11 0%,#293c64 40%);
+            background-size: cover;
+        }
+
+        #cartesian {
+            margin: 0px;
+            border: 1px solid #020202;
+            border-width: 1px 0px;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            pointer-events: none;
+        }
+
+        #underlay {
+            background: linear-gradient(to bottom left,rgba(255,194,0,0.3) 0%,transparent 60%);
+            background: -moz-osx-linear-gradient(to bottom left,rgba(255,194,0,0.3) 0%,transparent 60%);
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            position: absolute;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: rgba(10, 30, 60, 0.85);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(30, 144, 255, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(30, 144, 255, 0.3);
+            position: relative;
+            z-index: 100;
+        }
+
+        .header {
+            background: rgba(30, 144, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(30, 144, 255, 0.4);
+            color: #e6f3ff;
+            padding: 30px;
+            text-align: center;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            position: relative;
+            z-index: 101;
+            border-bottom: 1px solid rgba(30, 144, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .bike-icon {
+            font-size: 4em;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(15, 40, 80, 0.3);
+            border-top: 1px solid rgba(30, 144, 255, 0.2);
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-bottom-right-radius: 5px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .message.bot .message-content {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e6f3ff;
+            border: 1px solid rgba(30, 144, 255, 0.3);
+            border-bottom-left-radius: 5px;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-container {
+            padding: 20px;
+            background: rgba(20, 50, 100, 0.4);
+            border-top: 1px solid rgba(30, 144, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        #questionInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid rgba(30, 144, 255, 0.4);
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e6f3ff;
+            backdrop-filter: blur(10px);
+        }
+
+        #questionInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        #questionInput::placeholder {
+            color: rgba(230, 243, 255, 0.6);
+        }
+
+        #sendButton {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            color: white;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        #sendButton:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #764ba2, #667eea);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+
+        #sendButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .sql-display {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .result-display {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #155724;
+        }
+
+        .error-display {
+            background: #f8d7da;
+            border: 1px solid #dc3545;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            color: #721c24;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .example-questions {
+            padding: 20px;
+            background: rgba(15, 40, 80, 0.3);
+            border-top: 1px solid rgba(30, 144, 255, 0.2);
+        }
+
+        .example-questions h3 {
+            margin-bottom: 15px;
+            color: #e6f3ff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .example-question {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(30, 144, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #e6f3ff;
+            backdrop-filter: blur(10px);
+        }
+
+        .example-question:hover {
+            border-color: rgba(30, 144, 255, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 144, 255, 0.3);
+            background: rgba(30, 144, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+                <div id="underlay"></div>
+        <canvas id="cartesian" height="700"></canvas>
+        
+    <div class="container">
+        <div class="header">
+            <h1>🚴 Bike Share Analytics</h1>
+            <p>Ask questions about bike share data in natural language</p>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot">
+                <div class="message-content">
+                    👋 Hello! I'm your bike share analytics assistant. Ask me questions like:
+                    <br><br>
+                    • "How many kilometres did women ride on rainy days last month?"
+                    • "What was the average ride time for journeys that started at Congress Avenue in June 2025?"
+                    • "Which docking point saw the most departures during the first week of June 2025?"
+                </div>
+            </div>
+        </div>
+
+        <div class="example-questions">
+            <h3>💡 Try these example questions:</h3>
+            <div class="example-question" data-question="What was the average ride time for journeys that started at Congress Avenue in June 2025?">
+                What was the average ride time for journeys that started at Congress Avenue in June 2025?
+            </div>
+            <div class="example-question" data-question="Which docking point saw the most departures during the first week of June 2025?">
+                Which docking point saw the most departures during the first week of June 2025?
+            </div>
+            <div class="example-question" data-question="How many kilometres were ridden by women on rainy days in June 2025?">
+                How many kilometres were ridden by women on rainy days in June 2025?
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-group">
+                <input type="text" id="questionInput" placeholder="Ask your question here...">
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
