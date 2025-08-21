@@ -19,11 +19,30 @@ User Question → LLM Slot Extraction → Semantic Mapping → SQL Generation �
 5. **SQL Builder** - Template-based generation with parameterized values, never free-form SQL
 6. **Executor** - Safe query execution returning `{sql, result, error}`
 
+**Data Flow Architecture:**
+
+```
+Database Schema → Schema Introspection → Column Discovery → Value Sampling
+                    ↓
+User Question → LLM Slot Extraction → Intent Analysis → Structured Slots
+                    ↓
+Semantic Mapping → Column Scoring → Deterministic Selection → Join Planning
+                    ↓
+SQL Templates → Parameter Binding → Query Execution → Structured Response
+```
+
+**Key Architectural Principles:**
+- **Separation of Concerns**: Each component has a single, well-defined responsibility
+- **Deterministic Behavior**: Same input always produces same output through rule-based logic
+- **LLM Isolation**: LLM cannot access database schema or generate SQL directly
+- **Template Safety**: All SQL generated from predefined, safe templates
+- **Dynamic Discovery**: No hard-coded mappings, everything learned from live database
+
 ## 🔍 Semantic Mapping Method
 
 **No hard-coded English→column synonyms** - mapping is learned from live schema:
 
-**Deterministic Column Selection:**
+**Deterministic Column Selection Algorithm:**
 ```typescript
 const score = 0.5 * nameSimilarity + 
              0.2 * typeCompatibility + 
@@ -31,20 +50,58 @@ const score = 0.5 * nameSimilarity +
              0.1 * tableProximity;
 ```
 
-**Value Sampling Example:**
-- User says "women" → system discovers `rider_gender` column
-- Samples actual values: `['female', 'male', 'non-binary']`
-- Maps "women" → `rider_gender = 'female'`
+**Scoring Components Explained:**
 
-**Date Resolution:**
-- "June 2025" → `[2025-06-01, 2025-07-01)` (half-open intervals)
+1. **Name Similarity (50% weight)**: 
+   - Token-based matching: "women" → "rider_gender"
+   - Fuzzy string matching: "kilometres" → "trip_distance_km"
+   - N-gram analysis for partial matches
+
+2. **Type Compatibility (20% weight)**:
+   - Timestamps for time-related queries
+   - Numeric types for distance/aggregation
+   - Character types for categorical filters
+
+3. **Value Overlap (20% weight)**:
+   - Samples actual database values
+   - "women" → discovers `['female', 'male', 'non-binary']`
+   - "rainy" → discovers precipitation thresholds
+
+4. **Table Proximity (10% weight)**:
+   - Prefers fact table `trips` (owns timestamps)
+   - Dimension tables for additional context
+   - Minimizes join complexity
+
+**Value Sampling Process:**
+```typescript
+// Example: User says "women" → system discovers rider_gender column
+const genderColumns = safeColumns.filter(col => 
+  col.columnName.toLowerCase().includes('gender') && 
+  col.dataType.includes('character') &&
+  col.tableName === 'trips'
+);
+
+// Value sampling finds actual values: ['female', 'male', 'non-binary']
+// Maps "women" → rider_gender = 'female'
+```
+
+**Date Resolution Strategy:**
+- **Half-open intervals** to avoid off-by-one bugs
+- "June 2025" → `[2025-06-01, 2025-07-01)`
+- "first week of June 2025" → `[2025-06-01, 2025-06-08)`
 - Always applied to `trips.started_at` for trip queries
 
-**Join Strategy:**
+**Join Path Computation:**
+- **Shortest path algorithm** from fact table to target columns
 - Base table: `trips` (owns timestamps)
 - Station names: `JOIN stations s ON t.start_station_id = s.station_id`
 - Weather data: `JOIN daily_weather w ON DATE(t.started_at) = w.weather_date`
-- Only includes joins actually needed
+- Only includes joins actually needed by the question
+
+**Fallback Mechanisms:**
+- If LLM analysis fails → regex-based parsing
+- If column scoring is ambiguous → deterministic tie-breaking
+- If no matches found → graceful error with suggestions
 
 ## 🎯 Design Decisions Document
 
@@ -119,10 +176,41 @@ const score = 0.5 * nameSimilarity +
 
 ## 📦 Installation & Usage
 
+### Environment Configuration
+
+**Critical: You must create a `.env` file with the following credentials:**
+
+```bash
+# Database Configuration
+PGHOST=your_postgres_host
+PGUSER=your_postgres_username
+PGPORT=5432
+PGDATABASE=your_database_name
+PGPASSWORD=your_postgres_password
+
+# Groq LLM Configuration (Required for semantic analysis)
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama3-8b-8192
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+**Where to get these credentials:**
+- **PostgreSQL**: Your database connection details
+- **Groq API Key**: Sign up at [groq.com](https://groq.com) to get your API key
+- **Groq Model**: Uses `llama3-8b-8192` for optimal performance
+
 ### Local Development
 ```bash
 npm install
-cp env.example .env  # Set database credentials
+cp env.example .env  # Copy template
+# Edit .env with your actual credentials
 npm run build
 npm start
 npm test
