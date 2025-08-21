@@ -147,18 +147,6 @@ const genderColumns = safeColumns.filter(col =>
 - **Readability**: Cleaner, more understandable SQL
 - **Correctness**: Prevents join-related errors
 
-## �� Functional Requirements Compliance
-
-| Requirement | Status | Implementation |
-|-------------|--------|----------------|
-| **F-1: Simple chat-style UI** | ✅ | TypeScript + Node.js web interface |
-| **F-2: Parameterized SQL** | ✅ | All values use `$1, $2, $3...` placeholders |
-| **F-3: Semantic discovery** | ✅ | Dynamic schema introspection + scoring |
-| **F-4: Filters, joins, aggregations** | ✅ | Template-based SQL with minimal joins |
-| **F-5: Error handling** | ✅ | Graceful fallbacks + meaningful errors |
-| **F-6: HTTP endpoint** | ✅ | `POST /query` with exact response format |
-| **F-7: Unit tests** | ✅ | Comprehensive test suite (36 tests) |
-
 ## 🧪 Testing Strategy
 
 **Public Acceptance Tests (F-7):**
